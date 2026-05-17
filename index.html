@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Burpee Walk Pro · 智能跟练</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-color: #050505;
+        --card-bg: rgba(20, 20, 25, 0.4);
+        --text-main: #f8fafc;
+        --text-muted: #8b949e;
+        --theme-work: #10b981; /* 荧光绿 */
+        --theme-work-alt: #f43f5e; /* 警示红 */
+        --theme-rest: #3b82f6; /* 科技蓝 */
+        --theme-current: var(--theme-work);
+        --rhythm-time: 1.5s;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'Inter', -apple-system, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        overflow: hidden;
+        transition: background-color 0.8s ease;
+      }
+
+      /* 背景光晕 */
+      .bg-glow {
+        position: absolute;
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(
+          circle at center,
+          var(--theme-current) 0%,
+          transparent 40%
+        );
+        opacity: 0.05;
+        z-index: 0;
+        transition: background 0.1s;
+      }
+
+      .state-work .bg-glow {
+        animation: pulse-rhythm var(--rhythm-time) infinite ease-in-out;
+      }
+
+      @keyframes pulse-rhythm {
+        0% {
+          opacity: 0.03;
+          transform: scale(0.95);
+        }
+        50% {
+          opacity: 0.15;
+          transform: scale(1.05);
+        }
+        100% {
+          opacity: 0.03;
+          transform: scale(0.95);
+        }
+      }
+
+      /* 巨幅情绪背景文字：置顶 + 极低透明度水印效果 */
+      .bg-quote {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(1);
+        font-size: 11vw;
+        font-weight: 900;
+        color: rgba(255, 255, 255, 0.04); /* 极低透明度 */
+        white-space: nowrap;
+        z-index: 9999; /* 绝对置顶 */
+        pointer-events: none; /* 穿透点击，不影响下方操作 */
+        letter-spacing: -2px;
+        transition: opacity 1s ease, transform 3s ease-out;
+      }
+      .bg-quote.fade {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.95);
+      }
+
+      /* 主卡片毛玻璃 */
+      .container {
+        background: var(--card-bg);
+        backdrop-filter: blur(40px);
+        -webkit-backdrop-filter: blur(40px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 36px;
+        padding: 40px;
+        width: 90%;
+        max-width: 480px;
+        text-align: center;
+        box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        z-index: 10;
+        position: relative;
+        animation: float 6s ease-in-out infinite;
+      }
+
+      @keyframes float {
+        0% {
+          transform: translateY(0px);
+        }
+        50% {
+          transform: translateY(-8px);
+        }
+        100% {
+          transform: translateY(0px);
+        }
+      }
+
+      h1 {
+        font-size: 2.2rem;
+        font-weight: 900;
+        letter-spacing: -1px;
+        margin-bottom: 30px;
+        background: linear-gradient(135deg, #fff 0%, #8b949e 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .btn-stats-icon {
+        position: absolute;
+        top: 25px;
+        right: 25px;
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 20;
+        transition: all 0.3s;
+      }
+      .btn-stats-icon:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: scale(1.1);
+      }
+      .btn-stats-icon svg {
+        width: 20px;
+        height: 20px;
+        fill: var(--text-muted);
+      }
+
+      .settings {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
+        text-align: left;
+      }
+
+      .settings label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+
+      /* 隐藏输入框上下箭头 */
+      .settings input[type='number']::-webkit-inner-spin-button,
+      .settings input[type='number']::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      .settings input[type='number'] {
+        -moz-appearance: textfield;
+      }
+
+      .settings input {
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        color: #fff;
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-align: center;
+        width: 65px;
+        transition: all 0.3s;
+      }
+
+      .settings input:focus {
+        outline: none;
+        border-color: var(--theme-work);
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+      }
+
+      .dashboard {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .beat-ripple {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        border: 2px solid var(--theme-current);
+        opacity: 0;
+        z-index: -1;
+        pointer-events: none;
+      }
+      .state-work .beat-ripple {
+        animation: ripple-emit var(--rhythm-time) infinite
+          cubic-bezier(0.1, 0.8, 0.3, 1);
+      }
+      @keyframes ripple-emit {
+        0% {
+          width: 280px;
+          height: 280px;
+          opacity: 0.6;
+          border-width: 8px;
+        }
+        100% {
+          width: 550px;
+          height: 550px;
+          opacity: 0;
+          border-width: 0px;
+        }
+      }
+
+      .svg-ring {
+        width: 320px;
+        height: 320px;
+        transform: rotate(-90deg);
+        filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.5));
+      }
+
+      /* 移除任何影响重绘的过渡动画，确保持续平滑 */
+      .ring-bg {
+        stroke: rgba(255, 255, 255, 0.05);
+      }
+      .ring-progress {
+        stroke-dasharray: 848;
+        stroke-dashoffset: 848;
+        stroke-linecap: round;
+      }
+
+      .ring-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+      }
+      .timer-text {
+        font-size: 4.8rem;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        margin: 5px 0;
+        text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      }
+      .action-text {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--theme-current);
+        letter-spacing: 2px;
+      }
+      .rep-text {
+        font-size: 1.1rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        margin-top: 5px;
+      }
+
+      button {
+        background: var(--theme-current);
+        color: #000;
+        border: none;
+        padding: 18px 0;
+        width: 100%;
+        font-size: 1.2rem;
+        font-weight: 800;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-transform: uppercase;
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      }
+      button:active {
+        transform: translateY(2px);
+      }
+      .btn-stop {
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-top: 20px;
+        box-shadow: none;
+      }
+      .btn-stop:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        box-shadow: none;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+      body.state-rest {
+        --theme-current: var(--theme-rest);
+      }
+
+      /* 数据看板弹窗 */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(15px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+      }
+      .modal-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .modal-content {
+        background: rgba(20, 20, 25, 0.6);
+        backdrop-filter: blur(40px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 40px;
+        width: 90%;
+        max-width: 600px;
+        text-align: left;
+        position: relative;
+        transform: translateY(20px);
+        transition: transform 0.3s;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      }
+      .modal-overlay.active .modal-content {
+        transform: translateY(0);
+      }
+      .modal-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        font-size: 1.5rem;
+        color: #fff;
+        cursor: pointer;
+        opacity: 0.5;
+      }
+      .modal-close:hover {
+        opacity: 1;
+      }
+
+      .stat-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+      }
+      .stat-box {
+        display: flex;
+        flex-direction: column;
+      }
+      .stat-label {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        margin-bottom: 5px;
+      }
+      .stat-val {
+        font-size: 2.2rem;
+        font-weight: 900;
+        color: #fff;
+      }
+      .stat-val span {
+        font-size: 1rem;
+        color: var(--text-muted);
+        font-weight: 500;
+      }
+
+      /* 横向滚动柱状图 */
+      .chart-container {
+        height: 160px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-start;
+        gap: 16px;
+        padding-top: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        overflow-x: auto;
+      }
+      .chart-container::-webkit-scrollbar {
+        height: 6px;
+      }
+      .chart-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 3px;
+      }
+      .chart-container::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .chart-bar-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 32px;
+        height: 100%;
+        justify-content: flex-end;
+      }
+      .chart-bar {
+        width: 100%;
+        background: var(--theme-work);
+        border-radius: 4px 4px 0 0;
+        min-height: 2px;
+        transition: height 1s ease;
+        opacity: 0.8;
+      }
+      .chart-bar:hover {
+        opacity: 1;
+        background: var(--theme-work-alt);
+      }
+      .chart-date {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 10px;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg-quote" id="bg-quote">突破极限</div>
+    <div class="bg-glow"></div>
+
+    <div class="btn-stats-icon" onclick="statsModule.open()" id="btnStatsIcon">
+      <svg viewBox="0 0 24 24">
+        <path d="M5 19h14v2H5v-2zm2-8h2v6H7v-6zm4-6h2v12h-2V5zm4 4h2v8h-2V9z" />
+      </svg>
+    </div>
+
+    <div class="container">
+      <div id="view-setup">
+        <h1>Burpee Walk Pro</h1>
+        <div class="settings">
+          <label
+            ><span>训练组数</span
+            ><input type="number" id="inpSets" value="4" min="1"
+          /></label>
+          <label
+            ><span>每组个数</span
+            ><input type="number" id="inpReps" value="10" min="1"
+          /></label>
+          <label
+            ><span>单次耗时 (秒)</span
+            ><input type="number" id="inpPace" value="6" min="4"
+          /></label>
+          <label
+            ><span>组间休息 (秒)</span
+            ><input type="number" id="inpRest" value="60" min="10"
+          /></label>
+        </div>
+        <p
+          style="
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 30px;
+          "
+        >
+          单组运动耗时
+          <span id="estTime" style="color: #fff; font-weight: 700">01:00</span>
+        </p>
+        <button onclick="app.start()">开始专注训练</button>
+      </div>
+
+      <div id="view-workout" class="hidden">
+        <div class="dashboard">
+          <div class="beat-ripple"></div>
+          <svg class="svg-ring">
+            <circle
+              class="ring-bg"
+              id="ui-ring-bg"
+              stroke-width="20"
+              fill="transparent"
+              r="135"
+              cx="160"
+              cy="160"
+            />
+            <circle
+              class="ring-progress"
+              id="ui-ring"
+              stroke-width="20"
+              fill="transparent"
+              r="135"
+              cx="160"
+              cy="160"
+            />
+          </svg>
+          <div class="ring-content">
+            <div
+              style="
+                font-weight: 700;
+                color: var(--text-muted);
+                margin-bottom: 10px;
+                font-size: 1.1rem;
+              "
+            >
+              SET <span id="ui-set" style="color: #fff">1 / 4</span>
+            </div>
+            <div class="action-text" id="ui-action">准备</div>
+            <div class="timer-text" id="ui-time">00:00</div>
+            <div class="rep-text" id="ui-rep">0 / 0</div>
+          </div>
+        </div>
+        <button class="btn-stop" onclick="app.stop()">结束训练</button>
+      </div>
+      <audio
+        id="bgMusic"
+        loop
+        src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3"
+      ></audio>
+    </div>
+
+    <div class="modal-overlay" id="statsModal">
+      <div class="modal-content">
+        <div class="modal-close" onclick="statsModule.close()">×</div>
+        <div class="stat-header">
+          <div class="stat-box">
+            <div class="stat-label">今日运动时长</div>
+            <div class="stat-val" id="statToday">
+              0 <span>分</span> 0 <span>秒</span>
+            </div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">累计总时长</div>
+            <div class="stat-val" id="statTotal">0 <span>分钟</span></div>
+          </div>
+        </div>
+        <div class="stat-label" style="margin-bottom: 10px">
+          所有历史记录 (可横向滑动)
+        </div>
+        <div class="chart-container" id="chartContainer"></div>
+      </div>
+    </div>
+
+    <script>
+      // ----------------- 数据统计模块 -----------------
+      const statsModule = {
+        data: JSON.parse(localStorage.getItem('bw_data')) || {},
+        total: parseInt(localStorage.getItem('bw_total')) || 0,
+
+        getTodayKey() {
+          const d = new Date();
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+            2,
+            '0'
+          )}-${String(d.getDate()).padStart(2, '0')}`;
+        },
+
+        record(seconds) {
+          const today = this.getTodayKey();
+          this.data[today] = (this.data[today] || 0) + seconds;
+          this.total += seconds;
+          localStorage.setItem('bw_data', JSON.stringify(this.data));
+          localStorage.setItem('bw_total', this.total);
+        },
+
+        open() {
+          const today = this.getTodayKey();
+          const todaySec = this.data[today] || 0;
+
+          document.getElementById('statToday').innerHTML = `${Math.floor(
+            todaySec / 60
+          )} <span>分</span> ${todaySec % 60} <span>秒</span>`;
+          document.getElementById('statTotal').innerHTML = `${Math.floor(
+            this.total / 60
+          )} <span>分钟</span>`;
+
+          const chart = document.getElementById('chartContainer');
+          chart.innerHTML = '';
+
+          const allDates = Object.keys(this.data).sort();
+
+          if (allDates.length === 0) {
+            chart.innerHTML =
+              '<div style="color: #666; font-size: 0.9rem; align-self: center;">暂无运动数据，马上开始第一次训练吧！</div>';
+          } else {
+            let maxVal = 1;
+            allDates.forEach((d) => {
+              if (this.data[d] > maxVal) maxVal = this.data[d];
+            });
+
+            allDates.forEach((d) => {
+              const val = this.data[d];
+              const heightPercent = (val / maxVal) * 100;
+              const dateParts = d.split('-');
+              const displayDate = `${dateParts[1]}/${dateParts[2]}`;
+
+              const wrap = document.createElement('div');
+              wrap.className = 'chart-bar-wrap';
+              wrap.innerHTML = `
+                            <div class="chart-bar" style="height: ${heightPercent}%;" title="${Math.floor(
+                val / 60
+              )}分钟${val % 60}秒"></div>
+                            <div class="chart-date">${displayDate}</div>
+                        `;
+              chart.appendChild(wrap);
+            });
+            setTimeout(() => (chart.scrollLeft = chart.scrollWidth), 50);
+          }
+
+          document.getElementById('statsModal').classList.add('active');
+        },
+        close() {
+          document.getElementById('statsModal').classList.remove('active');
+        },
+      };
+
+      // ----------------- 核心跟练逻辑 -----------------
+      const quotes = {
+        work: [
+          '突破极限',
+          '保持核心稳定',
+          '享受泵感',
+          '超越昨天的自己',
+          '伟大始于坚持',
+        ],
+        rest: ['深呼吸', '平复心率', '感受力量的沉淀', '调整状态'],
+      };
+
+      const app = {
+        state: 'idle',
+        config: { sets: 4, reps: 10, pace: 6, rest: 60, workTime: 60 },
+        current: { set: 1, endTime: 0, lastRep: 0, lastSecond: 0 },
+        rafId: null,
+        audioCtx: new (window.AudioContext || window.webkitAudioContext)(),
+        circumference: 2 * Math.PI * 135, // 适配加粗后的半径135
+
+        init() {
+          const updateEst = () => {
+            const r = parseInt(document.getElementById('inpReps').value) || 0;
+            const p = parseInt(document.getElementById('inpPace').value) || 0;
+            let secs = r * p;
+            let m = Math.floor(secs / 60);
+            let s = secs % 60;
+            document.getElementById('estTime').innerText = `${
+              m < 10 ? '0' + m : m
+            }:${s < 10 ? '0' + s : s}`;
+          };
+          document
+            .getElementById('inpReps')
+            .addEventListener('input', updateEst);
+          document
+            .getElementById('inpPace')
+            .addEventListener('input', updateEst);
+        },
+
+        formatTime(secs) {
+          let m = Math.floor(secs / 60);
+          let s = Math.floor(secs % 60);
+          return `${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
+        },
+
+        updateQuote(type) {
+          const quoteEl = document.getElementById('bg-quote');
+          quoteEl.classList.add('fade');
+          setTimeout(() => {
+            quoteEl.innerText =
+              quotes[type][Math.floor(Math.random() * quotes[type].length)];
+            quoteEl.classList.remove('fade');
+          }, 1000);
+        },
+
+        playTone(type) {
+          if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+          const now = this.audioCtx.currentTime;
+          const isWork = type === 'work';
+          const freq = isWork ? 880 : 440;
+          for (let i = 0; i < (isWork ? 2 : 1); i++) {
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            osc.type = isWork ? 'triangle' : 'sine';
+            osc.frequency.setValueAtTime(freq, now + i * 0.2);
+            osc.connect(gain);
+            gain.connect(this.audioCtx.destination);
+            osc.start(now + i * 0.2);
+            gain.gain.setValueAtTime(0, now + i * 0.2);
+            gain.gain.linearRampToValueAtTime(0.8, now + i * 0.2 + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.2 + 0.4);
+            osc.stop(now + i * 0.2 + 0.5);
+          }
+        },
+
+        start() {
+          this.config.sets =
+            parseInt(document.getElementById('inpSets').value) || 4;
+          this.config.reps =
+            parseInt(document.getElementById('inpReps').value) || 10;
+          this.config.pace =
+            parseInt(document.getElementById('inpPace').value) || 6;
+          this.config.rest =
+            parseInt(document.getElementById('inpRest').value) || 60;
+          this.config.workTime = this.config.reps * this.config.pace;
+          document.documentElement.style.setProperty(
+            '--rhythm-time',
+            `${this.config.pace / 4}s`
+          );
+
+          this.current.set = 1;
+          document.getElementById('view-setup').classList.add('hidden');
+          document.getElementById('view-workout').classList.remove('hidden');
+          document.getElementById('btnStatsIcon').classList.add('hidden');
+
+          const bgm = document.getElementById('bgMusic');
+          bgm.volume = 0.5;
+          bgm.play();
+
+          this.switchTo('work');
+          this.loop();
+        },
+
+        stop() {
+          cancelAnimationFrame(this.rafId);
+          document.getElementById('bgMusic').pause();
+          document.getElementById('view-workout').classList.add('hidden');
+          document.getElementById('view-setup').classList.remove('hidden');
+          document.getElementById('btnStatsIcon').classList.remove('hidden');
+          document.body.classList.remove('state-rest');
+          document.getElementById('bg-quote').innerText = '突破极限';
+          this.state = 'idle';
+        },
+
+        switchTo(newState) {
+          this.state = newState;
+          const now = Date.now();
+          const ringBg = document.getElementById('ui-ring-bg');
+          const ringProgress = document.getElementById('ui-ring');
+
+          if (newState === 'work') {
+            document.body.classList.remove('state-rest');
+            this.current.endTime = now + this.config.workTime * 1000;
+            this.current.lastRep = 0;
+            this.playTone('work');
+            this.updateQuote('work');
+          } else if (newState === 'rest') {
+            document.body.classList.add('state-rest');
+            this.current.endTime = now + this.config.rest * 1000;
+            this.playTone('rest');
+            this.updateQuote('rest');
+            document.getElementById('ui-action').innerText = '休息调整';
+            document.getElementById('ui-action').style.color =
+              'var(--theme-rest)';
+            document.getElementById('ui-rep').innerText = '平复心率';
+
+            ringBg.style.stroke = 'rgba(255,255,255,0.05)';
+            ringProgress.style.stroke = 'var(--theme-rest)';
+            document.documentElement.style.setProperty(
+              '--theme-current',
+              'var(--theme-rest)'
+            );
+          }
+          document.getElementById(
+            'ui-set'
+          ).innerText = `${this.current.set} / ${this.config.sets}`;
+        },
+
+        loop() {
+          if (this.state === 'idle') return;
+          const now = Date.now();
+          const timeLeftMs = this.current.endTime - now;
+
+          if (timeLeftMs <= 0) {
+            if (this.state === 'work') {
+              if (this.current.set >= this.config.sets) {
+                document.getElementById('ui-action').innerText = '🎉 训练完成';
+                document.getElementById('ui-time').innerText = '00:00';
+                document.getElementById('ui-ring').style.strokeDashoffset = 0;
+                document.getElementById('bg-quote').innerText = '完美收官';
+                this.playTone('rest');
+                this.state = 'idle';
+                setTimeout(() => this.stop(), 3000);
+                return;
+              } else {
+                this.switchTo('rest');
+              }
+            } else {
+              this.current.set++;
+              this.switchTo('work');
+            }
+          }
+
+          const timeLeftSec = Math.ceil(Math.max(0, timeLeftMs) / 1000);
+          document.getElementById('ui-time').innerText =
+            this.formatTime(timeLeftSec);
+
+          if (
+            timeLeftSec !== this.current.lastSecond &&
+            this.state === 'work'
+          ) {
+            statsModule.record(1);
+            this.current.lastSecond = timeLeftSec;
+          }
+
+          const ringBg = document.getElementById('ui-ring-bg');
+          const ringProgress = document.getElementById('ui-ring');
+
+          if (this.state === 'work') {
+            const elapsedMs = this.config.workTime * 1000 - timeLeftMs;
+            const paceMs = this.config.pace * 1000;
+
+            let currRep = Math.floor(elapsedMs / paceMs) + 1;
+            if (currRep > this.config.reps) currRep = this.config.reps;
+
+            let repProgress = (elapsedMs % paceMs) / paceMs;
+            if (elapsedMs >= this.config.workTime * 1000) repProgress = 1;
+
+            document.getElementById(
+              'ui-rep'
+            ).innerText = `目标 ${currRep} / ${this.config.reps} 个`;
+
+            // 抛弃渐变节点，回归参考代码中最稳定的纯色无缝交替
+            if (currRep !== this.current.lastRep) {
+              const isOdd = currRep % 2 !== 0;
+              const fgColor = isOdd
+                ? 'var(--theme-work)'
+                : 'var(--theme-work-alt)';
+              const bgColor = isOdd
+                ? 'var(--theme-work-alt)'
+                : 'var(--theme-work)';
+
+              ringBg.style.stroke =
+                currRep === 1 ? 'rgba(255,255,255,0.05)' : bgColor;
+              ringProgress.style.stroke = fgColor;
+
+              document.getElementById('ui-action').style.color = fgColor;
+              document.documentElement.style.setProperty(
+                '--theme-current',
+                fgColor
+              );
+
+              this.current.lastRep = currRep;
+            }
+
+            let actionText = '';
+            if (repProgress < 0.25) actionText = '俯身下蹲 ⬇';
+            else if (repProgress < 0.5) actionText = '后撤平板 ⬅';
+            else if (repProgress < 0.75) actionText = '收腿下蹲 ➡';
+            else actionText = '起身站立 ⬆';
+            document.getElementById('ui-action').innerText = actionText;
+
+            ringProgress.style.strokeDashoffset =
+              this.circumference * (1 - repProgress);
+          } else if (this.state === 'rest') {
+            const restProgress = 1 - timeLeftMs / (this.config.rest * 1000);
+            ringProgress.style.strokeDashoffset =
+              this.circumference * (1 - restProgress);
+          }
+
+          this.rafId = requestAnimationFrame(() => this.loop());
+        },
+      };
+
+      app.init();
+    </script>
+  </body>
+</html>
